@@ -1,7 +1,3 @@
-"""GloVe Embeddings + chars bi-LSTM + bi-LSTM + CRF"""
-
-__author__ = "Guillaume Genthial"
-
 import functools
 import json
 import logging
@@ -46,9 +42,9 @@ def generator_fn(words, tags):
 
 def input_fn(words, tags, params=None, shuffle_and_repeat=False):
     params = params if params is not None else {}
-    shapes = ((([None], ()),               # (words, nwords)
-               ([None, None], [None])),    # (chars, nchars)
-              [None])                      # tags
+    shapes = ((([None], ()),               
+               ([None, None], [None])),    
+              [None])                      
     types = (((tf.string, tf.int32),
               (tf.string, tf.int32)),
              tf.string)
@@ -131,32 +127,10 @@ def model_fn(features, labels, mode, params):
     output_bw, _ = lstm_cell_bw(t, dtype=tf.float32, sequence_length=nwords)
     output = tf.concat([output_fw, output_bw], axis=-1)
     output = tf.transpose(output, perm=[1, 0, 2])
-    output = tf.layers.dropout(output, rate=dropout, training=training)
-    
-    # LSTM2
-    output = tf.transpose(output, perm=[1, 0, 2])  # Need time-major
-    lstm_cell_fw = tf.contrib.rnn.LSTMBlockFusedCell(params['lstm_size'])
-    lstm_cell_bw = tf.contrib.rnn.LSTMBlockFusedCell(params['lstm_size'])
-    lstm_cell_bw = tf.contrib.rnn.TimeReversedFusedRNN(lstm_cell_bw)
-    output_fw, _ = lstm_cell_fw(output, dtype=tf.float32, sequence_length=nwords)
-    output_bw, _ = lstm_cell_bw(output, dtype=tf.float32, sequence_length=nwords)
-    output2 = tf.concat([output_fw, output_bw], axis=-1)
-    output2 = tf.transpose(output2, perm=[1, 0, 2])
-    output2 = tf.layers.dropout(output2, rate=dropout, training=training)    
-    
-    # LSTM2
-    output2 = tf.transpose(output2, perm=[1, 0, 2])  # Need time-major
-    lstm_cell_fw = tf.contrib.rnn.LSTMBlockFusedCell(params['lstm_size'])
-    lstm_cell_bw = tf.contrib.rnn.LSTMBlockFusedCell(params['lstm_size'])
-    lstm_cell_bw = tf.contrib.rnn.TimeReversedFusedRNN(lstm_cell_bw)
-    output_fw, _ = lstm_cell_fw(output2, dtype=tf.float32, sequence_length=nwords)
-    output_bw, _ = lstm_cell_bw(output2, dtype=tf.float32, sequence_length=nwords)
-    output3 = tf.concat([output_fw, output_bw], axis=-1)
-    output3 = tf.transpose(output3, perm=[1, 0, 2])
-    output3 = tf.layers.dropout(output3, rate=dropout, training=training)      
+    output = tf.layers.dropout(output, rate=dropout, training=training)   
 
     # CRF
-    logits = tf.layers.dense(output3, num_tags)
+    logits = tf.layers.dense(output, num_tags)
     crf_params = tf.get_variable("crf", [num_tags, num_tags], dtype=tf.float32)
     pred_ids, _ = tf.contrib.crf.crf_decode(logits, crf_params, nwords)
 
