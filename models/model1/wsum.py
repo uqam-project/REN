@@ -41,7 +41,7 @@ def weight_sum(name, wsum_ops, l2_coef=None,
         else:
             W = tf.get_variable(
                 '{}_W'.format(name),
-                shape=(n_lm_layers, ),
+                shape=(n_layers, ),
                 initializer=tf.zeros_initializer,
                 regularizer=_l2_regularizer,
                 trainable=True,
