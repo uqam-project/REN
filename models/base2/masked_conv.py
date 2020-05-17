@@ -1,28 +1,9 @@
-"""Implement masked 1d convolution with max-pooling"""
-
-__author__ = "Guillaume Genthial"
-
 from six.moves import reduce
 import tensorflow as tf
 
 
 def masked_conv1d_and_max(t, weights, filters, kernel_size):
-    """Applies 1d convolution and a masked max-pooling
-    Parameters
-    ----------
-    t : tf.Tensor
-        A tensor with at least 3 dimensions [d1, d2, ..., dn-1, dn]
-    weights : tf.Tensor of tf.bool
-        A Tensor of shape [d1, d2, dn-1]
-    filters : int
-        number of filters
-    kernel_size : int
-        kernel size for the temporal convolution
-    Returns
-    -------
-    tf.Tensor
-        A tensor of shape [d1, d2, dn-1, filters]
-    """
+    
     # Get shape and parameters
     shape = tf.shape(t)
     ndims = t.shape.ndims
