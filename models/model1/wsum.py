@@ -1,6 +1,6 @@
 import tensorflow as tf
 
-def weight_layers(name, bilm_ops, l2_coef=None,
+def weight_sum(name, bilm_ops, l2_coef=None,
                   use_top_only=False, do_layer_norm=False):
 
     def _l2_regularizer(weights):
