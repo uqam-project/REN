@@ -1,7 +1,3 @@
-"""GloVe Embeddings + chars bi-LSTM + bi-LSTM + CRF"""
-
-__author__ = "Guillaume Genthial"
-
 import functools
 import json
 import logging
@@ -12,7 +8,7 @@ import numpy as np
 import tensorflow as tf
 from tf_metrics import precision, recall, f1
 
-from elmo import weight_layers
+from wsum import weight_sum
 
 DATADIR = '../../data/example'
 
