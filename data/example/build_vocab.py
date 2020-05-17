@@ -1,13 +1,6 @@
-"""Script to build words, chars and tags vocab"""
-
-__author__ = "Guillaume Genthial"
-
 from collections import Counter
 from pathlib import Path
 
-# TODO: modify this depending on your needs (1 will work just fine)
-# You might also want to be more clever about your vocab and intersect
-# the GloVe vocab with your dataset vocab, etc. You figure it out ;)
 MINCOUNT = 1
 
 if __name__ == '__main__':
