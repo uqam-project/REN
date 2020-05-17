@@ -1,7 +1,3 @@
-"""GloVe Embeddings + chars conv and max pooling + bi-LSTM + CRF"""
-
-__author__ = "Guillaume Genthial"
-
 import functools
 import json
 import logging
