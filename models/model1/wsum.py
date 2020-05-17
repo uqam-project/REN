@@ -40,7 +40,7 @@ def weight_sum(name, bilm_ops, l2_coef=None,
             reg = 0.0
         else:
             W = tf.get_variable(
-                '{}_sum_W'.format(name),
+                '{}_W'.format(name),
                 shape=(n_lm_layers, ),
                 initializer=tf.zeros_initializer,
                 regularizer=_l2_regularizer,
@@ -67,14 +67,14 @@ def weight_sum(name, bilm_ops, l2_coef=None,
             reg = [
                 r for r in tf.get_collection(
                                 tf.GraphKeys.REGULARIZATION_LOSSES)
-                if r.name.find('{}_sum_W/'.format(name)) >= 0
+                if r.name.find('{}_W/'.format(name)) >= 0
             ]
             if len(reg) != 1:
                 raise ValueError
 
         # scale the weighted sum by delta
         delta = tf.get_variable(
-            '{}_sum_delta'.format(name),
+            '{}_delta'.format(name),
             shape=(1, ),
             initializer=tf.ones_initializer,
             regularizer=None,
