@@ -184,7 +184,7 @@ if __name__ == '__main__':
         'epochs': 25,
         'batch_size': 32,
         'buffer': 15000,
-        'char_lstm_size': 100,
+        'char_lstm_size': 150,
         'lstm_size': 200,
         'words': str(Path(DATADIR, 'vocab.words.txt')),
         'chars': str(Path(DATADIR, 'vocab.chars.txt')),
