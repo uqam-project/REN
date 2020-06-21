@@ -11,7 +11,7 @@ def weight_sum(name, wsum_ops, l2_coef=None,
 
     # Get ops for computing embeddings and mask
     wsum_embeddings = wsum_ops['wsum_embeddings']
-    mask = bilm_ops['mask']
+    mask = wsum_ops['mask']
 
     n_layers = int(wsum_embeddings.get_shape()[1])
     lm_dim = int(wsum_embeddings.get_shape()[3])
