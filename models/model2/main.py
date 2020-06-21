@@ -149,7 +149,7 @@ def model_fn(features, labels, mode, params):
                 'mask': weights}
     
     weighted_sum = weight_layers(
-        'elmo_input1', wsum_ops, l2_coef=1.0, do_layer_norm=True, use_top_only=False)    
+        'wsum_input', wsum_ops, l2_coef=1.0, do_layer_norm=True, use_top_only=False)    
                                      
     output = tf.layers.dropout(weighted_sum['weighted_op'], rate=dropout, training=training)    
 
