@@ -1,8 +1,8 @@
 import tensorflow as tf
 
-def weight_sum(name, wsum_ops, l2_coef=None,
+def weight_layers(name, wsum_ops, l2_coef=None,
                   use_top_only=False, do_layer_norm=False):
-
+  
     def _l2_regularizer(weights):
         if l2_coef is not None:
             return l2_coef * tf.reduce_sum(tf.square(weights))
@@ -14,7 +14,7 @@ def weight_sum(name, wsum_ops, l2_coef=None,
     mask = wsum_ops['mask']
 
     n_layers = int(wsum_embeddings.get_shape()[1])
-    lm_dim = int(wsum_embeddings.get_shape()[3])
+    dim = int(wsum_embeddings.get_shape()[3])
 
     with tf.control_dependencies([wsum_embeddings, mask]):
         # Cast the mask and broadcast for layer use.
@@ -24,7 +24,7 @@ def weight_sum(name, wsum_ops, l2_coef=None,
         def _do_ln(x):
             # do layer normalization excluding the mask
             x_masked = x * broadcast_mask
-            N = tf.reduce_sum(mask_float) * lm_dim
+            N = tf.reduce_sum(mask_float) * dim
             mean = tf.reduce_sum(x_masked) / N
             variance = tf.reduce_sum(((x_masked - mean) * broadcast_mask)**2
                                     ) / N
@@ -40,7 +40,7 @@ def weight_sum(name, wsum_ops, l2_coef=None,
             reg = 0.0
         else:
             W = tf.get_variable(
-                '{}_W'.format(name),
+                '{}_wsum_W'.format(name),
                 shape=(n_layers, ),
                 initializer=tf.zeros_initializer,
                 regularizer=_l2_regularizer,
@@ -51,10 +51,10 @@ def weight_sum(name, wsum_ops, l2_coef=None,
             normed_weights = tf.split(
                 tf.nn.softmax(W + 1.0 / n_layers), n_layers
             )
-            # split LM layers
+            # split embeddings layers
             layers = tf.split(wsum_embeddings, n_layers, axis=1)
     
-            # compute the weighted, normalized LM activations
+            # compute the weighted, normalized embeddings activations
             pieces = []
             for w, t in zip(normed_weights, layers):
                 if do_layer_norm:
@@ -67,21 +67,21 @@ def weight_sum(name, wsum_ops, l2_coef=None,
             reg = [
                 r for r in tf.get_collection(
                                 tf.GraphKeys.REGULARIZATION_LOSSES)
-                if r.name.find('{}_W/'.format(name)) >= 0
+                if r.name.find('{}_wsum_W/'.format(name)) >= 0
             ]
             if len(reg) != 1:
                 raise ValueError
 
-        # scale the weighted sum by delta
-        delta = tf.get_variable(
-            '{}_delta'.format(name),
+        # scale the weighted sum by beta
+        beta = tf.get_variable(
+            '{}_wsum_beta'.format(name),
             shape=(1, ),
             initializer=tf.ones_initializer,
             regularizer=None,
             trainable=True,
         )
-        weighted_layers = sum_pieces * delta
+        weighted_wsum_layers = sum_pieces * beta
 
-        ret = {'weighted_op': weighted_layers, 'regularization_op': reg}
+        ret = {'weighted_op': weighted_wsum_layers, 'regularization_op': reg}
 
     return ret
