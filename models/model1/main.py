@@ -8,7 +8,7 @@ import numpy as np
 import tensorflow as tf
 from tf_metrics import precision, recall, f1
 
-from wsum import weight_sum
+from elmo import weight_layers
 
 DATADIR = '../../data/example'
 
@@ -115,57 +115,84 @@ def model_fn(features, labels, mode, params):
     glove = np.load(params['glove'])['embeddings']  # np.array
     variable = np.vstack([glove, [[0.] * params['dim']]])
     variable = tf.Variable(variable, dtype=tf.float32, trainable=False)
-    embeddings = tf.nn.embedding_lookup(variable, word_ids)
+    word_embeddings = tf.nn.embedding_lookup(variable, word_ids)
     
     
     # Concatenate Word and Char Embeddings
-    #embeddings = tf.concat([word_embeddings, char_embeddings], axis=-1)
+    embeddings = tf.concat([word_embeddings, char_embeddings], axis=-1)
     embeddings = tf.layers.dropout(embeddings, rate=dropout, training=training)
     
     
-    # LSTM for glove
+    # LSTM
     t = tf.transpose(embeddings, perm=[1, 0, 2])  # Need time-major
-    lstm_cell_fw = tf.contrib.rnn.LSTMBlockFusedCell(params['glstm_size'])
-    lstm_cell_bw = tf.contrib.rnn.LSTMBlockFusedCell(params['glstm_size'])
+    lstm_cell_fw = tf.contrib.rnn.LSTMBlockFusedCell(params['lstm_size'])
+    lstm_cell_bw = tf.contrib.rnn.LSTMBlockFusedCell(params['lstm_size'])
     lstm_cell_bw = tf.contrib.rnn.TimeReversedFusedRNN(lstm_cell_bw)
     output_fw, _ = lstm_cell_fw(t, dtype=tf.float32, sequence_length=nwords)
     output_bw, _ = lstm_cell_bw(t, dtype=tf.float32, sequence_length=nwords)
     output = tf.concat([output_fw, output_bw], axis=-1)
     output = tf.transpose(output, perm=[1, 0, 2])
     #output = tf.layers.dropout(output, rate=dropout, training=training)
-
+    
     
     layers = []
     layers.append(char_embeddings)
     layers.append(output)
     
-    wsum_embeddings = tf.concat(
+    lm_embeddings = tf.concat(
                               [tf.expand_dims(t, axis=1) for t in layers], axis=1)
     
     weights = tf.sequence_mask(nwords)
     
 
-    wsum_ops = {'wsum_embeddings':wsum_embeddings,
+    bilm_ops = {'lm_embeddings':lm_embeddings,
                 'mask': weights}
     
-    weighted_sum = weight_sum(
-        'wsum_input', wsum_ops, l2_coef=1.0, do_layer_norm=True, use_top_only=False)    
+    weight_sum = weight_layers(
+        'elmo_input1', bilm_ops, l2_coef=1.0, do_layer_norm=True, use_top_only=False)    
                                      
-    output = tf.layers.dropout(weight_sum['weighted_op'], rate=dropout, training=training)
+    output = tf.layers.dropout(weight_sum['weighted_op'], rate=dropout, training=training)    
+
+
     
-    # LSTM for wsum(GLSTM, CLSTM)
-    t = tf.transpose(output, perm=[1, 0, 2])  # Need time-major
-    lstm_cell_fw = tf.contrib.rnn.LSTMBlockFusedCell(params['wlstm_size'])
-    lstm_cell_bw = tf.contrib.rnn.LSTMBlockFusedCell(params['wlstm_size'])
+    
+    
+    # LSTM2
+    output1 = tf.transpose(output, perm=[1, 0, 2])  # Need time-major
+    lstm_cell_fw = tf.contrib.rnn.LSTMBlockFusedCell(params['lstm_size'])
+    lstm_cell_bw = tf.contrib.rnn.LSTMBlockFusedCell(params['lstm_size'])
     lstm_cell_bw = tf.contrib.rnn.TimeReversedFusedRNN(lstm_cell_bw)
-    output_fw, _ = lstm_cell_fw(t, dtype=tf.float32, sequence_length=nwords)
-    output_bw, _ = lstm_cell_bw(t, dtype=tf.float32, sequence_length=nwords)
-    output = tf.concat([output_fw, output_bw], axis=-1)
-    output = tf.transpose(output, perm=[1, 0, 2])    
-    output = tf.layers.dropout(output, rate=dropout, training=training)
+    output_fw, _ = lstm_cell_fw(output1, dtype=tf.float32, sequence_length=nwords)
+    output_bw, _ = lstm_cell_bw(output1, dtype=tf.float32, sequence_length=nwords)
+    output2 = tf.concat([output_fw, output_bw], axis=-1)
+    output2 = tf.transpose(output2, perm=[1, 0, 2])
+    #output = tf.layers.dropout(output, rate=dropout, training=training)
+    
+    
+    layers = []
+    layers.append(output)
+    layers.append(output2)
+    
+    lm_embeddings = tf.concat(
+                              [tf.expand_dims(t, axis=1) for t in layers], axis=1)
+    
+    weights = tf.sequence_mask(nwords)
+    
+
+    bilm_ops = {'lm_embeddings':lm_embeddings,
+                'mask': weights}
+    
+    weight_sum = weight_layers(
+        'elmo_input2', bilm_ops, l2_coef=1.0, do_layer_norm=True, use_top_only=False)    
+                                     
+    output_2 = tf.layers.dropout(weight_sum['weighted_op'], rate=dropout, training=training)       
+    
+    
+    
+    
     
     # CRF
-    logits = tf.layers.dense(output, num_tags)
+    logits = tf.layers.dense(output2, num_tags)
     crf_params = tf.get_variable("crf", [num_tags, num_tags], dtype=tf.float32)
     pred_ids, _ = tf.contrib.crf.crf_decode(logits, crf_params, nwords)
 
@@ -217,11 +244,10 @@ if __name__ == '__main__':
         'dropout': 0.5,
         'num_oov_buckets': 1,
         'epochs': 25,
-        'batch_size': 32,
+        'batch_size': 8,
         'buffer': 15000,
-        'char_lstm_size': 150,
-        'glstm_size': 150,
-        'wlstm_size': 200,
+        'char_lstm_size': 200,
+        'lstm_size': 200,
         'words': str(Path(DATADIR, 'vocab.words.txt')),
         'chars': str(Path(DATADIR, 'vocab.chars.txt')),
         'tags': str(Path(DATADIR, 'vocab.tags.txt')),
