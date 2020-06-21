@@ -1,30 +1,8 @@
 import tensorflow as tf
 
-def weight_layers(name, bilm_ops, l2_coef=None,
+def weight_layers(name, wsum_ops, l2_coef=None,
                   use_top_only=False, do_layer_norm=False):
-    '''
-    Weight the layers of a biLM with trainable scalar weights to
-    compute ELMo representations.
-    For each output layer, this returns two ops.  The first computes
-        a layer specific weighted average of the biLM layers, and
-        the second the l2 regularizer loss term.
-    The regularization terms are also add to tf.GraphKeys.REGULARIZATION_LOSSES 
-    Input:
-        name = a string prefix used for the trainable variable names
-        bilm_ops = the tensorflow ops returned to compute internal
-            representations from a biLM.  This is the return value
-            from BidirectionalLanguageModel(...)(ids_placeholder)
-        l2_coef: the l2 regularization coefficient $\lambda$.
-            Pass None or 0.0 for no regularization.
-        use_top_only: if True, then only use the top layer.
-        do_layer_norm: if True, then apply layer normalization to each biLM
-            layer before normalizing
-    Output:
-        {
-            'weighted_op': op to compute weighted average for output,
-            'regularization_op': op to compute regularization term
-        }
-    '''
+  
     def _l2_regularizer(weights):
         if l2_coef is not None:
             return l2_coef * tf.reduce_sum(tf.square(weights))
@@ -32,8 +10,8 @@ def weight_layers(name, bilm_ops, l2_coef=None,
             return 0.0
 
     # Get ops for computing LM embeddings and mask
-    lm_embeddings = bilm_ops['lm_embeddings']
-    mask = bilm_ops['mask']
+    lm_embeddings = wsum_ops['lm_embeddings']
+    mask = wsum_ops['mask']
 
     n_lm_layers = int(lm_embeddings.get_shape()[1])
     lm_dim = int(lm_embeddings.get_shape()[3])
