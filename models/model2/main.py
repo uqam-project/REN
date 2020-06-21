@@ -153,46 +153,10 @@ def model_fn(features, labels, mode, params):
                                      
     output = tf.layers.dropout(weight_sum['weighted_op'], rate=dropout, training=training)    
 
-
-    
-    
-    
-    # LSTM2
-    output1 = tf.transpose(output, perm=[1, 0, 2])  # Need time-major
-    lstm_cell_fw = tf.contrib.rnn.LSTMBlockFusedCell(params['lstm_size'])
-    lstm_cell_bw = tf.contrib.rnn.LSTMBlockFusedCell(params['lstm_size'])
-    lstm_cell_bw = tf.contrib.rnn.TimeReversedFusedRNN(lstm_cell_bw)
-    output_fw, _ = lstm_cell_fw(output1, dtype=tf.float32, sequence_length=nwords)
-    output_bw, _ = lstm_cell_bw(output1, dtype=tf.float32, sequence_length=nwords)
-    output2 = tf.concat([output_fw, output_bw], axis=-1)
-    output2 = tf.transpose(output2, perm=[1, 0, 2])
-    #output = tf.layers.dropout(output, rate=dropout, training=training)
-    
-    
-    layers = []
-    layers.append(output)
-    layers.append(output2)
-    
-    lm_embeddings = tf.concat(
-                              [tf.expand_dims(t, axis=1) for t in layers], axis=1)
-    
-    weights = tf.sequence_mask(nwords)
-    
-
-    bilm_ops = {'lm_embeddings':lm_embeddings,
-                'mask': weights}
-    
-    weight_sum = weight_layers(
-        'elmo_input2', bilm_ops, l2_coef=1.0, do_layer_norm=True, use_top_only=False)    
-                                     
-    output_2 = tf.layers.dropout(weight_sum['weighted_op'], rate=dropout, training=training)       
-    
-    
-    
     
     
     # CRF
-    logits = tf.layers.dense(output2, num_tags)
+    logits = tf.layers.dense(output, num_tags)
     crf_params = tf.get_variable("crf", [num_tags, num_tags], dtype=tf.float32)
     pred_ids, _ = tf.contrib.crf.crf_decode(logits, crf_params, nwords)
 
